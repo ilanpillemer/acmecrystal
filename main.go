@@ -1,6 +1,6 @@
-// acmecrystal watches for .cr files being written
-// it then runs the crystal formatting tool on that written file
-// and the reloads the acme window with the formatted file
+// acmecrystal watches for .cr files being written then runs the
+// crystal formatting tool on that written file and then reloads the
+// acme window with the formatted file
 package main
 
 import (
