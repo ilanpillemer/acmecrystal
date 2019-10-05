@@ -8,7 +8,6 @@ import (
 	"flag"
 	"io/ioutil"
 	"log"
-	"os"
 	"os/exec"
 	"strings"
 
@@ -56,6 +55,11 @@ func crystalFormat(id int, name string) {
 		return
 	}
 
+	// remember dot
+	w.ReadAddr() // not sure why you need to open this to init
+	w.Ctl("addr=dot")
+	p1, p2, _ := w.ReadAddr()
+
 	defer w.CloseFiles()
 	old, err := ioutil.ReadFile(name)
 	if err != nil {
@@ -65,7 +69,8 @@ func crystalFormat(id int, name string) {
 	// `crystal tool format <filename>` reformats the file in place.  So
 	// after running this the file on disk will be reformatted, but not
 	// the file in the Acme window
-	os.Setenv("TERM", "dumb")
+	// os.Setenv("TERM", "dumb") when my pull request gets accepted this should work
+	// https://github.com/crystal-lang/crystal/pull/8271
 	out, err := exec.Command("crystal", "tool", "format", "--no-color", name).CombinedOutput()
 	if err != nil {
 		log.Printf("%s", out)
@@ -88,4 +93,12 @@ func crystalFormat(id int, name string) {
 		return
 	}
 	w.Write("data", new)
+
+	// put dot back where it was
+	w.Addr("#%d,#%d", p1, p2)
+	err = w.Ctl("dot=addr")
+	if err != nil {
+		log.Print(err)
+		return
+	}
 }
