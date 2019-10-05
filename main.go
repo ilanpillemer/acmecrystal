@@ -8,15 +8,28 @@ import (
 	"flag"
 	"io/ioutil"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 
 	"9fans.net/go/acme"
 )
 
+// see https://9fans.github.io/plan9port/man/man4/acme.html
 func main() {
 	flag.Parse()
+	//log   reports a log of window operations since the opening of the
+	//log file. Each line describes a single operation using three fields
+	//separated by single spaces: the decimal window ID, the operation,
+	//and the window name. Reading from log blocks until there is an
+	//operation to report, so reading the file can be used to monitor
+	//editor activity and react to changes. The reported operations are
+	//new (window creation), zerox (window creation via zerox), get, put,
+	//and del (window deletion). The window name can be the empty string;
+	//in particular it is empty in new log entries corresponding to windows
+	//created by external programs.
 	l, err := acme.Log()
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -27,6 +40,7 @@ func main() {
 			log.Fatal(err)
 		}
 
+		//If log reports that a crystal file is being "put", then format it
 		if event.Name != "" && event.Op == "put" && strings.HasSuffix(event.Name, ".cr") {
 			crystalFormat(event.ID, event.Name)
 		}
@@ -34,6 +48,8 @@ func main() {
 }
 
 func crystalFormat(id int, name string) {
+	// When a command is run under acme, a directory holding these files
+	// is posted as the 9P service acme
 	w, err := acme.Open(id, nil)
 	if err != nil {
 		log.Print(err)
@@ -46,12 +62,30 @@ func crystalFormat(id int, name string) {
 		return
 	}
 
-	new, _ := exec.Command("crystal", "tool", "format", name).CombinedOutput()
+	// `crystal tool format <filename>` reformats the file in place.  So
+	// after running this the file on disk will be reformatted, but not
+	// the file in the Acme window
+	os.Setenv("TERM", "dumb")
+	out, err := exec.Command("crystal", "tool", "format", "--no-color", name).CombinedOutput()
+	if err != nil {
+		log.Printf("%s", out)
+		return
+	}
+
+	new, err := ioutil.ReadFile(name)
+	if err != nil {
+		return
+	}
 	if bytes.Equal(old, new) {
 		return
 	}
 
 	w.Write("ctl", []byte("mark"))
 	w.Write("ctl", []byte("nomark"))
-	w.Write("ctl", []byte("get"))
+	err = w.Addr("0,$")
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	w.Write("data", new)
 }
