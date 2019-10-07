@@ -14,7 +14,7 @@ import (
 	"9fans.net/go/acme"
 )
 
-// see https://9fans.github.io/plan9port/man/man4/acme.html
+// web https://9fans.github.io/plan9port/man/man4/acme.html
 func main() {
 	flag.Parse()
 	//log   reports a log of window operations since the opening of the
@@ -96,9 +96,6 @@ func crystalFormat(id int, name string) {
 
 	// put dot back where it was
 	w.Addr("#%d,#%d", p1, p2)
-	err = w.Ctl("dot=addr")
-	if err != nil {
-		log.Print(err)
-		return
-	}
+	w.Ctl("dot=addr")
+	w.Ctl("show")
 }
